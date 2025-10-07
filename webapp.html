@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Выбери друга</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: white;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .friends-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .friend-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .friend-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .friend-card.selected {
+            border: 3px solid #667eea;
+            background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%);
+        }
+
+        .friend-emoji {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .friend-name {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .friend-description {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .create-form {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .emoji-picker {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .emoji-option {
+            font-size: 32px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 10px;
+            transition: all 0.3s;
+        }
+
+        .emoji-option:hover {
+            background: #f0f0f0;
+        }
+
+        .emoji-option.selected {
+            background: #667eea;
+            transform: scale(1.2);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .help-text {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .success-message {
+            background: #4caf50;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .success-message.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎭 Выбери друга</h1>
+        <p class="subtitle">Выбери готового друга или создай своего</p>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('predefined')">Готовые друзья</button>
+            <button class="tab" onclick="switchTab('create')">Создать своего</button>
+        </div>
+
+        <div id="success-message" class="success-message"></div>
+
+        <!-- Вкладка с готовыми друзьями -->
+        <div id="predefined-tab" class="tab-content active">
+            <div class="friends-grid" id="friends-grid">
+                <!-- Заполняется JavaScript -->
+            </div>
+            <button class="btn" id="select-btn" onclick="selectFriend()" disabled>
+                Выбрать друга
+            </button>
+        </div>
+
+        <!-- Вкладка создания своего друга -->
+        <div id="create-tab" class="tab-content">
+            <div class="create-form">
+                <div class="form-group">
+                    <label>Имя друга:</label>
+                    <input type="text" id="friend-name" placeholder="Например: Макс" maxlength="30">
+                </div>
+
+                <div class="form-group">
+                    <label>Выбери эмодзи:</label>
+                    <div class="emoji-picker" id="emoji-picker">
+                        <span class="emoji-option" data-emoji="👤">👤</span>
+                        <span class="emoji-option" data-emoji="😊">😊</span>
+                        <span class="emoji-option" data-emoji="🎮">🎮</span>
+                        <span class="emoji-option" data-emoji="📚">📚</span>
+                        <span class="emoji-option" data-emoji="🎸">🎸</span>
+                        <span class="emoji-option" data-emoji="⚽">⚽</span>
+                        <span class="emoji-option" data-emoji="🎨">🎨</span>
+                        <span class="emoji-option" data-emoji="🌸">🌸</span>
+                        <span class="emoji-option" data-emoji="🚀">🚀</span>
+                        <span class="emoji-option" data-emoji="🌟">🌟</span>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Короткое описание:</label>
+                    <input type="text" id="friend-desc" placeholder="Например: Весёлый и активный друг" maxlength="100">
+                    <div class="help-text">Кратко опиши характер друга</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Подробное описание характера:</label>
+                    <textarea id="friend-prompt" placeholder="Опиши личность друга подробно: характер, интересы, стиль общения, манеру речи..."></textarea>
+                    <div class="help-text">Это поможет боту общаться в нужном стиле</div>
+                </div>
+
+                <button class="btn" onclick="createFriend()">
+                    Создать и выбрать друга
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        // Готовые друзья
+        const predefinedFriends = [
+            {
+                id: "friend_1",
+                name: "Анна",
+                emoji: "🌸",
+                description: "Добрая и заботливая подруга"
+            },
+            {
+                id: "friend_2",
+                name: "Макс",
+                emoji: "🎮",
+                description: "Весёлый геймер"
+            },
+            {
+                id: "friend_3",
+                name: "София",
+                emoji: "📚",
+                description: "Умная собеседница"
+            },
+            {
+                id: "friend_4",
+                name: "Алекс",
+                emoji: "🎸",
+                description: "Творческая душа"
+            }
+        ];
+
+        let selectedFriendId = null;
+        let selectedEmoji = '👤';
+
+        // Отрисовка карточек друзей
+        function renderFriends() {
+            const grid = document.getElementById('friends-grid');
+            grid.innerHTML = predefinedFriends.map(friend => `
+                <div class="friend-card" onclick="selectCard('${friend.id}')">
+                    <div class="friend-emoji">${friend.emoji}</div>
+                    <div class="friend-name">${friend.name}</div>
+                    <div class="friend-description">${friend.description}</div>
+                </div>
+            `).join('');
+        }
+
+        // Выбор карточки друга
+        function selectCard(friendId) {
+            selectedFriendId = friendId;
+            
+            // Удаляем выделение со всех карточек
+            document.querySelectorAll('.friend-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            
+            // Выделяем выбранную карточку
+            event.currentTarget.classList.add('selected');
+            
+            // Активируем кнопку
+            document.getElementById('select-btn').disabled = false;
+        }
+
+        // Отправка выбранного друга в бот
+        function selectFriend() {
+            if (selectedFriendId) {
+                const data = {
+                    action: 'select_friend',
+                    friend_id: selectedFriendId
+                };
+                tg.sendData(JSON.stringify(data));
+                tg.close();
+            }
+        }
+
+        // Переключение вкладок
+        function switchTab(tabName) {
+            // Обновляем кнопки табов
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.currentTarget.classList.add('active');
+            
+            // Обновляем контент
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(tabName + '-tab').classList.add('active');
+        }
+
+        // Выбор эмодзи
+        document.querySelectorAll('.emoji-option').forEach(option => {
+            option.addEventListener('click', function() {
+                document.querySelectorAll('.emoji-option').forEach(opt => {
+                    opt.classList.remove('selected');
+                });
+                this.classList.add('selected');
+                selectedEmoji = this.dataset.emoji;
+            });
+        });
+
+        // Создание кастомного друга
+        function createFriend() {
+            const name = document.getElementById('friend-name').value.trim();
+            const description = document.getElementById('friend-desc').value.trim();
+            const promptText = document.getElementById('friend-prompt').value.trim();
+
+            if (!name) {
+                alert('Введи имя друга!');
+                return;
+            }
+
+            if (!description) {
+                alert('Добавь короткое описание!');
+                return;
+            }
+
+            if (!promptText) {
+                alert('Опиши характер друга подробнее!');
+                return;
+            }
+
+            // Формируем системный промпт
+            const systemPrompt = `Ты - ${name}, виртуальный друг.
+
+Твоя личность и характер:
+${promptText}
+
+Важные правила:
+- Общайся естественно и по-дружески
+- Помни всю историю разговора и используй контекст
+- Используй эмодзи, чтобы сделать общение живым
+- Когда тебя просят прислать фото или селфи, соглашайся и говори что-то вроде "Конечно! Вот моя фотография 📸" - система автоматически сгенерирует изображение
+- Веди себя как настоящий друг: слушай, поддерживай, делись мыслями
+
+Общайся в соответствии со своим характером!`;
+
+            const friendId = 'custom_' + Date.now();
+            
+            const data = {
+                action: 'create_friend',
+                friend_id: friendId,
+                name: name,
+                description: description,
+                system_prompt: systemPrompt,
+                emoji: selectedEmoji
+            };
+
+            tg.sendData(JSON.stringify(data));
+            tg.close();
+        }
+
+        // Инициализация
+        renderFriends();
+    </script>
+</body>
+</html>
+
